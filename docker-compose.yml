@@ -22,6 +22,8 @@ services:
       MYSQL_DATABASE: 'db'
       MYSQL_USER: 'admin'
       MYSQL_PASSWORD: 'admin'
+    volumes:
+      - ./php/sql:/docker-entrypoint-initdb.d/
     ports:
       - 3306:3306
   phpmyadmin:

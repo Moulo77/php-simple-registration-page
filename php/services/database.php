@@ -21,22 +21,24 @@ if (isset($_POST['reg_user'])) {
         array_push($errors, "Les mots de passe ne correspondent pas");
     }
 
-    $user_check_query = "SELECT * FROM users WHERE username='$username' LIMIT 1";
-    $result = mysqli_query($db, $user_check_query);
-    $user = mysqli_fetch_assoc($result);
+    $stmt = mysqli_prepare($db, "SELECT * FROM users WHERE username=? LIMIT 1");
+    mysqli_stmt_bind_param($stmt, "s", $username);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_store_result($stmt);
 
-    if ($user) {
-        if ($user['username'] === $username) {
-            array_push($errors, "Ce pseudo est déjà utilisé, veuillez en choisir un différent");
-        }
+    if (mysqli_stmt_num_rows($stmt) > 0) {
+        array_push($errors, "Ce pseudo est déjà utilisé, veuillez en choisir un différent");
     }
 
-    if (count($errors) == 0) {
-        $password = md5($password_1);
+    mysqli_stmt_close($stmt);
 
-        $query = "INSERT INTO users (username, password) 
-                          VALUES('$username', '$password')";
-        mysqli_query($db, $query);
+    if (count($errors) == 0) {
+        $password = password_hash($password_1, PASSWORD_DEFAULT);
+
+        $stmt = mysqli_prepare($db, "INSERT INTO users (username, password) VALUES(?, ?)");
+        mysqli_stmt_bind_param($stmt, "ss", $username, $password);
+        mysqli_stmt_execute($stmt);
+
         $_SESSION['username'] = $username;
         $_SESSION['success'] = "Vous êtes maintenant connecté";
         header('location: index.php');
@@ -55,16 +57,21 @@ if (isset($_POST['login_user'])) {
     }
 
     if (count($errors) == 0) {
-        $password = md5($password);
-        $query = "SELECT * FROM users WHERE username='$username' AND password='$password'";
-        $results = mysqli_query($db, $query);
-        if (mysqli_num_rows($results) == 1) {
-            $_SESSION['username'] = $username;
+        $stmt = mysqli_prepare($db, "SELECT username, password FROM users WHERE username=?");
+        mysqli_stmt_bind_param($stmt, "s", $username);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_bind_result($stmt, $db_username, $db_password);
+        mysqli_stmt_fetch($stmt);
+
+        if (password_verify($password, $db_password)) {
+            $_SESSION['username'] = $db_username;
             $_SESSION['success'] = "Vous êtes connecté";
             header('location: index.php');
         } else {
             array_push($errors, "Mot de passe ou pseudo incorrect");
         }
+
+        mysqli_stmt_close($stmt);
     }
 }
 
