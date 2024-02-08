@@ -4,6 +4,8 @@ session_start();
 $username = "";
 $errors = array();
 
+define('MAX_LOGIN_ATTEMPTS', '5');
+
 $db = mysqli_connect('db', 'admin', 'admin', 'db');
 
 if (isset($_POST['reg_user'])) {
@@ -16,7 +18,18 @@ if (isset($_POST['reg_user'])) {
     }
     if (empty($password_1)) {
         array_push($errors, "Un mot de passe est requis");
+    } elseif (strlen($password_1) < 8) {
+        array_push($errors, "Le mot de passe doit comporter au moins 8 caractères");
+    } elseif (!preg_match("/[a-z]/", $password_1)) {
+        array_push($errors, "Le mot de passe doit contenir au moins une lettre minuscule");
+    } elseif (!preg_match("/[A-Z]/", $password_1)) {
+        array_push($errors, "Le mot de passe doit contenir au moins une lettre majuscule");
+    } elseif (!preg_match("/[0-9]/", $password_1)) {
+        array_push($errors, "Le mot de passe doit contenir au moins un chiffre");
+    } elseif (!preg_match("/[?!@#$%^&*()\-_=+{};:,<.>]/", $password_1)) {
+        array_push($errors, "Le mot de passe doit contenir au moins un caractère spécial");
     }
+
     if ($password_1 != $password_2) {
         array_push($errors, "Les mots de passe ne correspondent pas");
     }
@@ -46,6 +59,10 @@ if (isset($_POST['reg_user'])) {
 }
 
 if (isset($_POST['login_user'])) {
+    if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= MAX_LOGIN_ATTEMPTS) {
+        array_push($errors, 'Vous avez atteint le nombre maximum d\'essais autorisés !');
+    }
+
     $username = mysqli_real_escape_string($db, $_POST['username']);
     $password = mysqli_real_escape_string($db, $_POST['password']);
 
@@ -66,9 +83,12 @@ if (isset($_POST['login_user'])) {
         if (password_verify($password, $db_password)) {
             $_SESSION['username'] = $db_username;
             $_SESSION['success'] = "Vous êtes connecté";
+            unset($_SESSION["login_attempts"]);
             header('location: index.php');
         } else {
-            array_push($errors, "Mot de passe ou pseudo incorrect");
+            $remaining_attempts = isset($_SESSION['login_attempts']) ? MAX_LOGIN_ATTEMPTS - $_SESSION['login_attempts'] : MAX_LOGIN_ATTEMPTS;
+            $_SESSION['login_attempts'] = isset($_SESSION['login_attempts']) ? $_SESSION['login_attempts'] + 1 : 1;
+            array_push($errors, "Mot de passe ou pseudo incorrect. Il vous reste " . $remaining_attempts . " tentative(s) de connexion.");
         }
 
         mysqli_stmt_close($stmt);

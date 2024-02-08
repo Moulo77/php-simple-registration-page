@@ -75,3 +75,24 @@ form,
     border: 1px solid #3c763d;
     margin-bottom: 20px;
 }
+
+.password-hint {
+    font-size: 12px;
+}
+
+.password-criteria {
+    margin-top: 5px;
+    padding-left: 20px;
+}
+
+.password-criteria li {
+    list-style-type: none;
+}
+
+.password-criteria li:before {
+    content: "\2022";
+    color: #666;
+    display: inline-block;
+    width: 10px;
+    margin-left: -20px;
+}
